@@ -815,13 +815,14 @@ function renderCombatEnemyPanels() {
   const enemy = GAME.currentEnemy;
   const d = enemy.derived || getMonsterDerived(enemy);
   const stats = getEffectiveEnemyStats(enemy);
+  const defenseStat = stats.DEF ?? 0;
+  const resistance = Math.floor((d.stats?.DEF ?? defenseStat) / 3);
   enemyStatsPanel.innerHTML = [
     ['FOR', stats.FOR ?? 0],
     ['RAP', stats.RAP ?? 0],
-    ['DEF', stats.DEF ?? 0],
-    
+    ['DEF', defenseStat],
     ['ATK', d.atk ?? 0],
-    ['DEF', d.def ?? 0],
+    ['RES', resistance],
     ['CRIT', `${d.crit ?? 0}%`],
     ['ESQ', `${d.evasion ?? 0}%`]
   ].map(([k,v]) => `<div class=\"combat-stat-line\"><strong>${k} :</strong><span>${v}</span></div>`).join('');
