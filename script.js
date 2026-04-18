@@ -775,7 +775,7 @@ function renderGame() {
     ['CAP', effectiveStats.CAP],
     ['META', effectiveStats.META],
     ['ATK', derived.atk],
-    ['DEF', derived.def],
+    ['RES', derived.def],
     ['CRIT', `${derived.crit}%`],
     ['ESQ', `${derived.evasion}%`]
   ].map(([k,v]) => `<div class=\"combat-stat-line\"><strong>${k} :</strong><span>${v}</span></div>`).join('');
