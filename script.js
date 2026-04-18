@@ -477,15 +477,16 @@ function applyTankCoca() {
   applySatietyToHero(satiety, `🥤 ${enemy.name} utilise <strong>Coca</strong> et te remplit de <strong>${satiety}</strong> PS !${crit ? ' <span class="critical">CRITIQUE !</span>' : ''}`);
   if (!GAME.inCombat) return;
 
-  const poisonAmount = Math.max(1, Math.floor(enemy.derived.stats.FOR / 2) + enemy.level);
-  const statMalus = enemy.level + 2;
+  const poisonAmount = Math.max(1, Math.floor(enemy.derived.stats.FOR / 2) + Math.floor(enemy.level / 2));
+  const statMalus = Math.floor(enemy.level / 2) + 2;
+  const statTarget = ['FOR', 'RAP', 'META'][roll(0, 2)];
   GAME.heroPoison = { amount: poisonAmount, turns: 2 };
   GAME.heroDebuffs = [{
-    stats: ['FOR', 'RAP', 'META'],
+    stats: [statTarget],
     amount: statMalus,
     turns: 2
   }];
-  addLog(`Le coca t’empoisonne pour <strong>2 tours</strong> et applique un malus de <strong>${statMalus}</strong> à <strong>FOR / RAP / META</strong> pendant <strong>2 tours</strong>.`, 'loss');
+  addLog(`Le coca t’empoisonne pour <strong>2 tours</strong> et applique un malus de <strong>${statMalus}</strong> à <strong>${statTarget}</strong> pendant <strong>2 tours</strong>.`, 'loss');
   renderGame();
 }
 
