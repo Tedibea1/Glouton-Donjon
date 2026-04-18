@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glouton Donjon — Copie Valeria</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-wrapper">
+    <div class="header">
+      <h1>GLOUTON DONJON</h1>
+      <div class="subtitle">Exploration, combats… et transformation du corps. Que demander de plus ?</div>
+    </div>
+
+
+    <div id="menu-screen" class="menu-screen">
+      <div class="menu-card menu-list-card menu-single-card">
+        <h2>Liste des personnages</h2>
+        <div id="character-list" class="character-list"></div>
+        <div id="menu-empty-text" class="menu-empty-text">Aucun personnage sauvegardé.</div>
+        <div class="menu-separator"></div>
+        <div class="menu-action-bar">
+          <button id="menu-create-btn" class="class-btn menu-btn">Créer</button>
+          <button id="menu-play-btn" class="class-btn menu-btn" disabled>Jouer</button>
+          <button id="menu-delete-btn" class="class-btn menu-btn danger-btn" disabled>Supprimer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="creation-screen" class="creation-screen hidden">
+      <div class="creation-card">
+        <h2>Créer ton personnage</h2>
+        <label class="field-label" for="hero-name">Pseudo</label>
+        <input id="hero-name" type="text" maxlength="18" placeholder="Entre ton pseudo" />
+
+        <div class="field-label">Classe</div>
+        <div class="class-grid" id="class-grid"></div>
+
+        <div class="points-box">
+          <span>Points à répartir</span>
+          <strong id="creation-points">10</strong>
+        </div>
+
+        <div class="stat-list" id="creation-stat-list"></div>
+
+        <div class="creation-actions">
+          <button id="creation-back-btn" class="small-btn secondary-btn" type="button">Retour</button>
+          <button id="start-btn" class="class-btn start-btn">Commencer l'aventure</button>
+        </div>
+      </div>
+
+      <div class="creation-card">
+        <h2>Aperçu</h2>
+        <div class="identity">
+          <div id="preview-emoji" class="avatar">🍽️</div>
+          <div id="preview-name" class="name">Aventurière</div>
+          <div id="preview-class" class="meta">Guerrière</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="mini-stat"><strong>FOR</strong><span id="preview-for">5</span></div>
+          <div class="mini-stat"><strong>RAP</strong><span id="preview-rap">5</span></div>
+          <div class="mini-stat"><strong>CAP</strong><span id="preview-cap">5</span></div>
+          <div class="mini-stat"><strong>META</strong><span id="preview-meta">5</span></div>
+        </div>
+
+        <ul id="class-bonuses" class="bonus-list"></ul>
+      </div>
+    </div>
+
+    <div id="game-screen" class="game-screen hidden">
+      <div class="side-panel">
+        <h2>Héroïne</h2>
+        <div id="player-visual-mini" class="identity">
+          <img id="player-avatar-mini" class="hero-preview-img" src="assets/normal.png" alt="Héroïne" />
+          <div id="player-name-mini" class="name">Aventurière</div>
+          <div id="player-class-mini" class="meta">Guerrière — Niveau <span id="p-level">1</span></div>
+        </div>
+
+        <div class="bar-label"><span>PS</span><span id="p-ps-text">0 / 100</span></div>
+        <div class="health-bar-container"><div id="p-ps-bar" class="health-bar reverse-bar"></div></div>
+
+        <div class="bar-label"><span>Énergie</span><span id="p-energy-text">20 / 20</span></div>
+        <div class="mana-bar-container"><div id="p-energy-bar" class="mana-bar"></div></div>
+
+        <div class="bar-label"><span>XP</span><span id="p-xp-text">0 / 100</span></div>
+        <div class="xp-bar-container"><div id="p-xp-bar" class="xp-bar"></div></div>
+
+        <div class="stats-grid">
+          <div class="mini-stat"><strong>FOR</strong><span id="p-for">5</span></div>
+          <div class="mini-stat"><strong>CAP</strong><span id="p-cap">5</span></div>
+          <div class="mini-stat"><strong>RAP</strong><span id="p-rap">5</span></div>
+          <div class="mini-stat"><strong>META</strong><span id="p-meta">5</span></div>
+          <div class="mini-stat"><strong>ATK</strong><span id="p-atk">0</span></div>
+          <div class="mini-stat"><strong>DEF</strong><span id="p-def">0</span></div>
+          <div class="mini-stat"><strong>Esquive</strong><span id="p-evasion">0%</span></div>
+          <div class="mini-stat"><strong>Crit</strong><span id="p-crit">0%</span></div>
+        </div>
+
+        <div class="equipment-box">
+          <div><strong>Arme :</strong> <span id="equip-weapon">Aucune</span></div>
+          <div><strong>Tenue :</strong> <span id="equip-armor">Aucune</span></div>
+          <div><strong>Salles franchies :</strong> <span id="rooms-count">0</span></div>
+        </div>
+      </div>
+
+      <div class="main-center">
+        <div class="battlefield">
+          <div class="combat-side combat-left">
+            <div id="combat-player-stats" class="combat-stat-panel"></div>
+            <div id="combat-player-bonus" class="combat-bonus-panel">
+              <div class="combat-panel-title">Bonus/Malus</div>
+              <div id="combat-player-bonus-text">Aucun bonus<br>Aucun malus</div>
+            </div>
+          </div>
+
+          <div id="player-card" class="visual-card">
+            <h3 id="player-battle-name">Aventurière</h3>
+            <div id="player-battle-sub" class="subtext">Prête à entrer dans le donjon</div>
+            <div class="combat-inline-bars" id="player-inline-bars">
+              <div class="health-bar-container compact-bar"><div id="player-card-ps-bar" class="health-bar reverse-bar"></div><span id="player-card-ps-inline" class="bar-inline-text">PS 0 / 100</span></div>
+              <div class="mana-bar-container compact-bar"><div id="player-card-energy-bar" class="mana-bar"></div><span id="player-card-energy-inline" class="bar-inline-text">Énergie 0 / 100</span></div>
+            </div>
+            <div class="combat-card-separator"></div>
+            <img id="player-battle-img" class="battle-img hero-battle-img" src="assets/normal.png" alt="Héroïne" />
+            <div class="bar-wrap exploration-bar-wrap">
+              <div class="bar-label"><span>PS</span><span id="player-card-ps">0 / 100</span></div>
+              <div class="health-bar-container"><div id="player-card-ps-bar-explore" class="health-bar reverse-bar"></div></div>
+            </div>
+            <div class="status-chip" id="player-status-chip">En attente</div>
+          </div>
+
+          <div id="enemy-card" class="visual-card">
+            <h3 id="enemy-name">Porte du Donjon</h3>
+            <div id="enemy-sub" class="subtext">Une aventure t'attend</div>
+            <div class="combat-inline-bars" id="enemy-inline-bars">
+              <div class="health-bar-container compact-bar"><div id="enemy-hp-bar" class="health-bar"></div><span id="enemy-hp-inline" class="bar-inline-text">PV —</span></div>
+            </div>
+            <div class="combat-card-separator"></div>
+            <img id="enemy-sprite" class="battle-img enemy-battle-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='180'>🏰</text></svg>" alt="Porte du Donjon" />
+            <div class="bar-wrap exploration-bar-wrap">
+              <div class="bar-label"><span>PV</span><span id="enemy-hp-text">—</span></div>
+              <div class="health-bar-container"><div id="enemy-hp-bar-explore" class="health-bar"></div></div>
+            </div>
+            <div class="status-chip" id="enemy-status-chip">Exploration</div>
+          </div>
+
+          <div class="combat-side combat-right">
+            <div id="combat-enemy-stats" class="combat-stat-panel"></div>
+            <div id="combat-enemy-bonus" class="combat-bonus-panel">
+              <div class="combat-panel-title">Bonus/Malus</div>
+              <div id="combat-enemy-bonus-text">Aucun bonus<br>Aucun malus</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="log" class="log-area panel"></div>
+
+        <div id="exploration-controls" class="controls">
+          <button class="action-btn" id="btn-explore">Avancer dans le donjon<small>Déclenche combat, coffre ou piège</small></button>
+          <button class="action-btn" id="btn-rest">Se reposer<small>Attends 10 sec pour vider les PS et restaurer l'énergie</small></button>
+        </div>
+
+        <div id="combat-controls" class="controls hidden">
+          <button class="action-btn" id="btn-attack">Attaquer<small>Fiable et précise</small></button>
+          <button class="action-btn" id="btn-heavy">Digérer<small>Libère de l'espace dans ton ventre</small></button>
+          <button class="action-btn" id="btn-block">Encaisser<small>Réduit la satiété du tour</small></button>
+          <button class="action-btn" id="btn-skill">Compétence de classe<small id="skill-label">Compétence</small></button>
+        </div>
+
+        <div id="defeat-controls" class="controls hidden">
+          <button class="action-btn" id="btn-restart-run">Continuer<small>Lancer la récupération</small></button>
+        </div>
+      </div>
+
+      <div class="side-panel">
+        <h2>Inventaire</h2>
+
+        <div class="inventory-section-title">Équipement</div>
+        <div id="equipment-list" class="inventory-list"></div>
+        <div class="inventory-actions">
+          <button class="small-btn" id="btn-use-equipped">Utiliser</button>
+          <button class="small-btn" id="btn-equip-equipped">Équiper</button>
+          <button class="small-btn" id="btn-drop-equipped">Jeter</button>
+        </div>
+
+        <div class="inventory-section-title">Sac</div>
+        <div id="inventory-list" class="inventory-list"></div>
+        <div class="inventory-actions">
+          <button class="small-btn" id="btn-use-item">Utiliser</button>
+          <button class="small-btn" id="btn-equip-item">Équiper</button>
+          <button class="small-btn" id="btn-drop-item">Jeter</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal" class="modal">
+      <button id="modal-close" class="modal-close hidden" aria-label="Fermer">×</button>
+      <h2 id="modal-title">Information</h2>
+      <p id="modal-text"></p>
+      <div id="modal-stat-choices" class="stat-choices hidden"></div>
+      <div class="modal-actions" id="modal-actions">
+        <button class="choice-btn" id="modal-confirm">Continuer</button>
+        <button class="choice-btn hidden" id="modal-restart">Continuer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
