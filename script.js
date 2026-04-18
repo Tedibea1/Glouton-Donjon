@@ -818,8 +818,8 @@ function renderCombatEnemyPanels() {
   enemyStatsPanel.innerHTML = [
     ['FOR', stats.FOR ?? 0],
     ['RAP', stats.RAP ?? 0],
-    ['CAP', stats.DEF ?? 0],
-    ['META', enemy.level ?? 0],
+    ['DEF', stats.DEF ?? 0],
+    
     ['ATK', d.atk ?? 0],
     ['DEF', d.def ?? 0],
     ['CRIT', `${d.crit ?? 0}%`],
