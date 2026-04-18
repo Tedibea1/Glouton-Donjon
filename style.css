@@ -329,6 +329,16 @@ input[type="text"] {
 .combat-stat-panel { display:flex; flex-direction:column; gap:5px; }
 .combat-stat-line { display:flex; justify-content:space-between; gap:8px; font-size:0.78rem; }
 .combat-stat-line strong { color:#f7d794; font-size:0.76rem; }
+.combat-stat-spacer {
+  height: 0;
+  margin: 6px 0 4px;
+  border-top: 1px solid rgba(247, 215, 148, 0.22);
+}
+.combat-stat-line.is-atk strong { color: #e74c3c; }
+.combat-stat-line.is-def strong,
+.combat-stat-line.is-res strong { color: #5dade2; }
+.combat-stat-line.is-esq strong { color: #58d68d; }
+.combat-stat-line.is-crit strong { color: #f5b041; }
 .combat-bonus-panel { min-height:108px; }
 .combat-panel-title { color:var(--secondary); font-size:0.95rem; font-weight:bold; margin-bottom:8px; }
 .combat-bonus-panel div:last-child { font-size:0.86rem; line-height:1.35; }
