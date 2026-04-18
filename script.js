@@ -921,6 +921,7 @@ function startCombat() {
   GAME.enemyPoison = null;
   GAME.enemyDebuffs = [];
   GAME.inCombat = true; GAME.isBlocking = false;
+  refs.log.innerHTML = '';
   addLog(`Un <strong>${GAME.currentEnemy.name}</strong> bloque ta route !`, 'loss'); renderGame();
 }
 
@@ -1085,6 +1086,7 @@ function getEnemyXpReward(enemy) {
 function victory() {
   const enemy = GAME.currentEnemy; GAME.inCombat = false; GAME.currentEnemy = null; GAME.heroPoison = null; GAME.heroDebuffs = []; GAME.enemyPoison = null; GAME.enemyDebuffs = [];
   const xpReward = getEnemyXpReward(enemy);
+  refs.log.innerHTML = '';
   addLog(`${enemy.name} est vaincu ! <strong>+${xpReward} XP</strong>.`, 'gain'); GAME.hero.xp += xpReward; rollLoot(enemy); tryLevelUp(); renderGame();
 }
 
