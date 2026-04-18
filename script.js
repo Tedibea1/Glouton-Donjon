@@ -557,6 +557,24 @@ function scaleLootItem(item, level = GAME.hero.level) {
   return scaled;
 }
 
+function renderCombatStats(rows) {
+  return rows.map((row) => {
+    if (row.type === 'spacer') {
+      return '<div class="combat-stat-spacer" aria-hidden="true"></div>';
+    }
+
+    const colorClass = {
+      ATK: 'is-atk',
+      DEF: 'is-def',
+      RES: 'is-res',
+      ESQ: 'is-esq',
+      CRIT: 'is-crit'
+    }[row.key] || 'is-base';
+
+    return `<div class="combat-stat-line ${colorClass}"><strong>${row.key} :</strong><span>${row.value}</span></div>`;
+  }).join('');
+}
+
 function createDigestPotion(amount = 35 + GAME.hero.level * 3) {
   return { name: 'Potion digestive', type: 'consumable', stackable: true, digest: amount, effectText: `Retire ${amount} PS`, icon: '🧪' };
 }
@@ -769,16 +787,17 @@ function renderGame() {
   refs.skillLabel.textContent = `${CLASS_DATA[hero.className].skillName} (${CLASS_DATA[hero.className].skillCost} énergie)`;
 
   const heroStatsPanel = document.getElementById('combat-player-stats');
-  heroStatsPanel.innerHTML = [
-    ['FOR', effectiveStats.FOR],
-    ['RAP', effectiveStats.RAP],
-    ['CAP', effectiveStats.CAP],
-    ['META', effectiveStats.META],
-    ['ATK', derived.atk],
-    ['DEF', derived.def],
-    ['CRIT', `${derived.crit}%`],
-    ['ESQ', `${derived.evasion}%`]
-  ].map(([k,v]) => `<div class=\"combat-stat-line\"><strong>${k} :</strong><span>${v}</span></div>`).join('');
+  heroStatsPanel.innerHTML = renderCombatStats([
+    { key: 'FOR', value: effectiveStats.FOR },
+    { key: 'RAP', value: effectiveStats.RAP },
+    { key: 'CAP', value: effectiveStats.CAP },
+    { key: 'META', value: effectiveStats.META },
+    { type: 'spacer' },
+    { key: 'ATK', value: derived.atk },
+    { key: 'DEF', value: derived.def },
+    { key: 'CRIT', value: `${derived.crit}%` },
+    { key: 'ESQ', value: `${derived.evasion}%` }
+  ]);
 
   const playerBonusText = document.getElementById('combat-player-bonus-text');
   if (GAME.heroDebuffs.length) {
@@ -806,9 +825,16 @@ function renderCombatEnemyPanels() {
   const enemyStatsPanel = document.getElementById('combat-enemy-stats');
   const enemyBonus = document.getElementById('combat-enemy-bonus-text');
   if (!GAME.currentEnemy) {
-    enemyStatsPanel.innerHTML = [
-      ['FOR', 0], ['RAP', 0], ['CAP', 0], ['META', 0], ['ATK', 0], ['DEF', 0], ['CRIT', '0%'], ['ESQ', '0%']
-    ].map(([k,v]) => `<div class="combat-stat-line"><strong>${k} :</strong><span>${v}</span></div>`).join('');
+    enemyStatsPanel.innerHTML = renderCombatStats([
+      { key: 'FOR', value: 0 },
+      { key: 'RAP', value: 0 },
+      { key: 'DEF', value: 0 },
+      { type: 'spacer' },
+      { key: 'ATK', value: 0 },
+      { key: 'RES', value: 0 },
+      { key: 'CRIT', value: '0%' },
+      { key: 'ESQ', value: '0%' }
+    ]);
     enemyBonus.innerHTML = 'Aucun bonus<br>Aucun malus';
     return;
   }
@@ -817,15 +843,16 @@ function renderCombatEnemyPanels() {
   const stats = getEffectiveEnemyStats(enemy);
   const defenseStat = stats.DEF ?? 0;
   const resistance = Math.floor((d.stats?.DEF ?? defenseStat) / 3);
-  enemyStatsPanel.innerHTML = [
-    ['FOR', stats.FOR ?? 0],
-    ['RAP', stats.RAP ?? 0],
-    ['DEF', defenseStat],
-    ['ATK', d.atk ?? 0],
-    ['RES', resistance],
-    ['CRIT', `${d.crit ?? 0}%`],
-    ['ESQ', `${d.evasion ?? 0}%`]
-  ].map(([k,v]) => `<div class=\"combat-stat-line\"><strong>${k} :</strong><span>${v}</span></div>`).join('');
+  enemyStatsPanel.innerHTML = renderCombatStats([
+    { key: 'FOR', value: stats.FOR ?? 0 },
+    { key: 'RAP', value: stats.RAP ?? 0 },
+    { key: 'DEF', value: defenseStat },
+    { type: 'spacer' },
+    { key: 'ATK', value: d.atk ?? 0 },
+    { key: 'RES', value: resistance },
+    { key: 'CRIT', value: `${d.crit ?? 0}%` },
+    { key: 'ESQ', value: `${d.evasion ?? 0}%` }
+  ]);
   if (GAME.enemyDebuffs.length) {
     enemyBonus.innerHTML = GAME.enemyDebuffs.map((debuff) => `Malus : -${debuff.amount} ${debuff.stat} (${debuff.turns} tour${debuff.turns > 1 ? 's' : ''})`).join('<br>');
   } else {
