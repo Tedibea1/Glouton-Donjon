@@ -1218,6 +1218,7 @@ function gameOver() {
   GAME.isGameOver = true;
   GAME.isRecovering = false;
   GAME.isBlocking = false;
+  GAME.roomsCleared = Math.max(0, GAME.roomsCleared - 1);
   GAME.heroPoison = null;
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
