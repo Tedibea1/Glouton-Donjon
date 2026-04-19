@@ -20,9 +20,9 @@ const HERO_SPRITES = {
 const CLASS_DATA = {
   Guerrière: {
     emoji: '⚔️',
-    bonuses: ['+2 FOR au départ', '+2 CAP au départ', 'Compétence : Coup de bouclier', 'Très résistante quand elle encaisse'],
+    bonuses: ['+2 FOR au départ', '+2 CAP au départ', 'Compétence : Punition Frénétique', 'Très résistante quand elle encaisse'],
     baseAdjust: { FOR: 2, CAP: 2, RAP: 0, META: 0 },
-    skillName: 'Coup de bouclier',
+    skillName: 'Punition Frénétique',
     skillCost: 8,
   },
   Assassin: {
@@ -101,6 +101,9 @@ const GAME = {
   pendingModalAction: null,
   lastPlayerAction: '',
   lastEnemyAction: '',
+  lastPlayerActionCrit: false,
+  lastEnemyActionCrit: false,
+  heroBuffs: [],
   heroDebuffs: [],
   heroPoison: null,
   enemyDebuffs: [],
@@ -160,6 +163,7 @@ function serializeGameState() {
     recoveryEndsAt: GAME.recoveryEndsAt,
     lastPlayerAction: GAME.lastPlayerAction,
     lastEnemyAction: GAME.lastEnemyAction,
+    heroBuffs: GAME.heroBuffs,
     heroDebuffs: GAME.heroDebuffs,
     heroPoison: GAME.heroPoison,
     enemyDebuffs: GAME.enemyDebuffs,
@@ -256,6 +260,7 @@ function hydrateGameState(state) {
   GAME.recoveryEndsAt = state.recoveryEndsAt || null;
   GAME.lastPlayerAction = state.lastPlayerAction || '';
   GAME.lastEnemyAction = state.lastEnemyAction || '';
+  GAME.heroBuffs = state.heroBuffs || [];
   GAME.heroDebuffs = state.heroDebuffs || [];
   GAME.heroPoison = state.heroPoison || null;
   GAME.enemyDebuffs = state.enemyDebuffs || [];
@@ -268,7 +273,7 @@ function loadCharacter(characterId) {
   if (!state) return;
   hydrateGameState(state);
   showGameScreen();
-  updateLastActions('', '');
+  updateLastActions('', '', false, false);
   renderGame();
   if (GAME.isRecovering) resumeDefeatRecovery();
 }
@@ -308,11 +313,12 @@ function resetRunState() {
   GAME.recoveryEndsAt = null;
   GAME.lastPlayerAction = '';
   GAME.lastEnemyAction = '';
+  GAME.heroBuffs = [];
   GAME.heroDebuffs = [];
   GAME.heroPoison = null;
   GAME.enemyDebuffs = [];
   GAME.enemyPoison = null;
-  updateLastActions('', '');
+  updateLastActions('', '', false, false);
 }
 
 function roll(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -325,29 +331,31 @@ function addLog(message, type = '') {
   refs.log.scrollTop = refs.log.scrollHeight;
 }
 
-function updateLastActions(playerAction, enemyAction) {
+function updateLastActions(playerAction, enemyAction, playerCrit = null, enemyCrit = null) {
   if (typeof playerAction === 'string') GAME.lastPlayerAction = playerAction;
   if (typeof enemyAction === 'string') GAME.lastEnemyAction = enemyAction;
+  if (typeof playerCrit === 'boolean') GAME.lastPlayerActionCrit = playerCrit;
+  if (typeof enemyCrit === 'boolean') GAME.lastEnemyActionCrit = enemyCrit;
 
   const playerActionEl = document.getElementById('player-last-action');
   const enemyActionEl = document.getElementById('enemy-last-action');
-  const renderAction = (text, side) => {
+  const renderAction = (text, side, isCrit) => {
     const valueFirstMatch = String(text || '').match(/^(\d+[%]?)\s*:\s*(.+)$/);
     if (valueFirstMatch) {
       const [, value, label] = valueFirstMatch;
-      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value">${value}</span></span>`;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value${isCrit ? ' is-crit' : ''}">${value}</span></span>`;
     }
 
     const valueLastMatch = String(text || '').match(/^(.+?)\s*:\s*(\d+[%]?)$/);
     if (valueLastMatch) {
       const [, label, value] = valueLastMatch;
-      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value">${value}</span></span>`;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value${isCrit ? ' is-crit' : ''}">${value}</span></span>`;
     }
 
     return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${String(text || '')}</span></span>`;
   };
-  if (playerActionEl) playerActionEl.innerHTML = renderAction(GAME.lastPlayerAction, 'player');
-  if (enemyActionEl) enemyActionEl.innerHTML = renderAction(GAME.lastEnemyAction, 'enemy');
+  if (playerActionEl) playerActionEl.innerHTML = renderAction(GAME.lastPlayerAction, 'player', GAME.lastPlayerActionCrit);
+  if (enemyActionEl) enemyActionEl.innerHTML = renderAction(GAME.lastEnemyAction, 'enemy', GAME.lastEnemyActionCrit);
 }
 
 function formatLootEntries(entries) {
@@ -412,7 +420,7 @@ function finishDefeatRecovery() {
   GAME.restInterval = null;
   GAME.isRecovering = false;
   GAME.recoveryEndsAt = null;
-  updateLastActions('', '');
+  updateLastActions('', '', false, false);
   GAME.hero.ps = 0;
   GAME.hero.energy = GAME.hero.maxEnergy;
   refs.modal.style.display = 'none';
@@ -569,7 +577,7 @@ function tickHeroStatuses() {
   if (GAME.heroPoison && GAME.heroPoison.turns > 0) {
     GAME.heroPoison.turns -= 1;
     const poisonAmount = GAME.heroPoison.amount;
-    updateLastActions(null, `${poisonAmount} : Poison`);
+    updateLastActions(null, `${poisonAmount} : Poison`, null, false);
     applySatietyToHero(poisonAmount, `🥤 Le coca continue d’agir : <strong>+${poisonAmount} PS</strong>.`, 'loss');
     if (GAME.heroPoison.turns <= 0) {
       GAME.heroPoison = null;
@@ -578,6 +586,15 @@ function tickHeroStatuses() {
   }
 
   if (!GAME.inCombat) return;
+
+  if (GAME.heroBuffs.length) {
+    GAME.heroBuffs = GAME.heroBuffs
+      .map((buff) => {
+        if (buff.justApplied) return { ...buff, justApplied: false };
+        return { ...buff, turns: buff.turns - 1 };
+      })
+      .filter((buff) => buff.turns > 0);
+  }
 
   if (GAME.heroDebuffs.length) {
     GAME.heroDebuffs = GAME.heroDebuffs
@@ -605,7 +622,7 @@ function applyTankCoca() {
     GAME.isBlocking = false;
   }
 
-  updateLastActions(null, `${satiety} : Coca`);
+  updateLastActions(null, `${satiety} : Coca`, null, crit);
   applySatietyToHero(satiety, `🥤 ${enemy.name} utilise <strong>Coca</strong> et te remplit de <strong>${satiety}</strong> PS !${crit ? ' <span class="critical">CRITIQUE !</span>' : ''}`);
   if (!GAME.inCombat) return;
 
@@ -637,7 +654,11 @@ function getHeroDerived(hero) {
 
   const maxPs = 52 + stats.CAP * 12 + hero.level * 10 + armorHp;
   const maxEnergy = 18 + stats.META * 8 + hero.level * 4 + weaponEnergy + armorEnergy;
-  const atk = Math.max(1, 4 + stats.FOR * 2 + hero.level + weaponAtk);
+  const atkBuffMultiplier = GAME.heroBuffs.reduce((multiplier, buff) => {
+    if (buff.stat === 'ATK_PERCENT') return multiplier * (1 + buff.amount);
+    return multiplier;
+  }, 1);
+  const atk = Math.max(1, Math.floor((4 + stats.FOR * 2 + hero.level + weaponAtk) * atkBuffMultiplier));
   const def = Math.max(0, Math.floor(stats.CAP * 0.8) + armorDef + weaponDef);
   const evasion = Math.min(45, 4 + stats.RAP * 2 + armorEva + (hero.className === 'Assassin' ? 5 : 0));
   const crit = Math.min(55, 5 + Math.floor(stats.RAP * 1.5) + weaponCrit + (hero.className === 'Assassin' ? 8 : 0));
@@ -807,11 +828,11 @@ function startGame() {
   GAME.hero.equipment.weapon = startWeapon || null; GAME.hero.equipment.armor = startArmor || null;
   syncHeroCaps(true); GAME.started = true;
   GAME.inCombat = false; GAME.isBlocking = false; GAME.awaitingEnemyTurn = false; GAME.currentEnemy = null; GAME.roomsCleared = 0;
-  GAME.pendingLevelUps = 0; GAME.isGameOver = false; GAME.heroDebuffs = []; GAME.heroPoison = null; GAME.enemyDebuffs = []; GAME.enemyPoison = null;
+  GAME.pendingLevelUps = 0; GAME.isGameOver = false; GAME.heroBuffs = []; GAME.heroDebuffs = []; GAME.heroPoison = null; GAME.enemyDebuffs = []; GAME.enemyPoison = null;
   GAME.selectedEquipmentId = startWeapon?.id || startArmor?.id || null;
   GAME.selectedItemId = GAME.hero.inventory.find((item) => !isEquipped(item))?.id || null;
   refs.creationScreen.classList.add('hidden'); refs.gameScreen.classList.remove('hidden');
-  updateLastActions('', '');
+  updateLastActions('', '', false, false);
   renderGame(); saveGameState(); renderCharacterMenu();
 }
 
@@ -931,6 +952,12 @@ function renderGame() {
 
   const playerBonusText = document.getElementById('combat-player-bonus-text');
   const playerEffects = [];
+  if (GAME.heroBuffs.length) {
+    playerEffects.push(...GAME.heroBuffs.map((buff) => {
+      if (buff.stat === 'ATK_PERCENT') return `Bonus : +${Math.round(buff.amount * 100)}% ATK (${buff.turns} tour${buff.turns > 1 ? 's' : ''})`;
+      return `Bonus : ${buff.stat} (${buff.turns} tour${buff.turns > 1 ? 's' : ''})`;
+    }));
+  }
   if (GAME.heroPoison?.turns > 0) {
     playerEffects.push(`Poison : +${GAME.heroPoison.amount} PS (${GAME.heroPoison.turns} tour${GAME.heroPoison.turns > 1 ? 's' : ''})`);
   }
@@ -1061,6 +1088,7 @@ function startCombat() {
   GAME.currentEnemy.maxHp = GAME.currentEnemy.derived.maxHp;
   GAME.currentEnemy.hp = GAME.currentEnemy.maxHp;
   GAME.currentEnemy.description = GAME.currentEnemy.boss ? `Boss • ${getEnemyDescription(GAME.currentEnemy)}` : getEnemyDescription(GAME.currentEnemy);
+  GAME.heroBuffs = [];
   GAME.heroPoison = null;
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
@@ -1087,7 +1115,7 @@ function playerAttack(kind) {
     const before = GAME.hero.ps;
     GAME.hero.ps = Math.max(0, GAME.hero.ps - digest);
     const recovered = Math.max(0, before - GAME.hero.ps);
-    updateLastActions(`Digérer : ${recovered}`, null);
+    updateLastActions(`Digérer : ${recovered}`, null, false, null);
     addLog(`🍽️ <strong>Digérer</strong> ! Tu libères <strong>${recovered}</strong> PS.`, 'gain');
     renderGame();
     return finishPlayerTurn();
@@ -1097,9 +1125,9 @@ function playerAttack(kind) {
   let baseDamage = roll(Math.max(1, derived.atk - 4), derived.atk + 3);
   let critBonus = false;
   if (roll(1, 100) <= derived.crit) { critBonus = true; baseDamage = Math.floor(baseDamage * 1.5); }
-  if (roll(1, 100) > hitChance) { updateLastActions('Attaque : 0', null); addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
+  if (roll(1, 100) > hitChance) { updateLastActions('Attaque : 0', null, false, null); addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
   const finalDamage = Math.max(1, baseDamage - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
-  updateLastActions(`Attaque : ${finalDamage}`, null);
+  updateLastActions(`Attaque : ${finalDamage}`, null, critBonus, null);
   applyDamageToEnemy(finalDamage, `Tu lances une attaque sur ${GAME.currentEnemy.name} et infliges <strong>${finalDamage}</strong> dégâts.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
   if (GAME.inCombat) finishPlayerTurn();
 }
@@ -1111,9 +1139,13 @@ function useClassSkill() {
   hero.energy -= cost;
 
   if (hero.className === 'Guerrière') {
-    const dmg = Math.floor( Math.max(1, roll(derived.atk + 4, derived.atk + 10)) * 0.6);
-    updateLastActions(`Coup de bouclier : ${dmg}`, null);
-    applyDamageToEnemy(dmg, `🛡️ <strong>Coup de bouclier</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${dmg}</strong> dégâts et tu encaisses mieux le prochain coup.`, 'critical');
+    let baseDamage = roll(Math.max(1, derived.atk - 4), derived.atk + 3);
+    let critBonus = false;
+    if (roll(1, 100) <= derived.crit) { critBonus = true; baseDamage = Math.floor(baseDamage * 1.5); }
+    const dmg = Math.max(1, Math.floor(baseDamage * 1.4) - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
+    GAME.heroBuffs = [{ stat: 'ATK_PERCENT', amount: 0.2, turns: 3, justApplied: true }];
+    updateLastActions(`Punition Frénétique : ${dmg}`, null, critBonus, null);
+    applyDamageToEnemy(dmg, `🛡️ <strong>Punition Frénétique</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${dmg}</strong> dégâts et tu encaisses mieux le prochain coup.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
     GAME.isBlocking = true;
   }
   if (hero.className === 'Gardien') {
@@ -1127,18 +1159,18 @@ function useClassSkill() {
     }
 
     if (roll(1, 100) > hitChance) {
-      updateLastActions("Morsure de l'Hydre : 0", null);
+      updateLastActions("Morsure de l'Hydre : 0", null, false, null);
       addLog("<strong>Morsure de l'Hydre</strong> rate sa cible !", 'info');
       renderGame();
       if (GAME.inCombat) finishPlayerTurn();
       return;
     }
 
-    const finalDamage = Math.max(1, baseDamage - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
+    const finalDamage = Math.max(1, Math.floor(baseDamage * 0.6) - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
     const malusStat = ['FOR', 'RAP', 'DEF'][roll(0, 2)];
     const statusAmount = hero.level + 2;
 
-    updateLastActions(`Morsure de l'Hydre : ${finalDamage}`, null);
+    updateLastActions(`Morsure de l'Hydre : ${finalDamage}`, null, critBonus, null);
     applyDamageToEnemy(finalDamage, `🐍 <strong>Morsure de l'Hydre</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${finalDamage}</strong> dégâts.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
 
     if (GAME.inCombat && GAME.currentEnemy) {
@@ -1153,7 +1185,7 @@ function useClassSkill() {
     let dmg = Math.max(1, Math.floor(roll(derived.atk + 5, derived.atk + 13) * 1.2));
     const realCrit = roll(1, 100) <= derived.crit;
     if (realCrit) dmg = Math.floor(dmg * 1.5);
-    updateLastActions(`Assassinat : ${dmg}`, null);
+    updateLastActions(`Assassinat : ${dmg}`, null, realCrit, null);
     applyDamageToEnemy(dmg, `🗡️ <strong>Assassinat</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${dmg}</strong> dégâts.${realCrit ? ' <span class="critical">Critique réel !</span>' : ''}`, 'critical');
   }
 
@@ -1163,7 +1195,7 @@ function useClassSkill() {
 function blockAction() {
   if (!GAME.inCombat) return;
   GAME.isBlocking = true;
-  updateLastActions('Encaisser', null);
+  updateLastActions('Encaisser', null, false, null);
   addLog('Tu te mets en position défensive. La satiété du prochain coup sera réduite.', 'info');
   finishPlayerTurn();
 }
@@ -1184,7 +1216,7 @@ function enemyTurn() {
 
   const derived = getHeroDerived(GAME.hero);
   if (roll(1, 100) <= derived.evasion) {
-    updateLastActions(null, '0 : Attaque');
+    updateLastActions(null, '0 : Attaque', null, false);
     addLog(`Tu esquives l’attaque de ${GAME.currentEnemy.name} !`, 'info'); GAME.isBlocking = false; toggleActionButtons(false); return;
   }
 
@@ -1199,7 +1231,7 @@ function enemyTurn() {
   if (crit) satiety = Math.floor(satiety * 1.5);
   satiety = Math.max(1, satiety - Math.floor(derived.def / 3));
   if (GAME.isBlocking) { satiety = Math.max(1, Math.floor(satiety * 0.45)); addLog('Tu encaisses une partie du choc grâce à ta défense.', 'info'); GAME.isBlocking = false; }
-  updateLastActions(null, `${satiety} : Attaque`);
+  updateLastActions(null, `${satiety} : Attaque`, null, crit);
   applySatietyToHero(satiety, `${GAME.currentEnemy.name} te remplit de <strong>${satiety}</strong> PS !${crit ? ' <span class="critical">CRITIQUE !</span>' : ''}`);
   if (GAME.inCombat) toggleActionButtons(false);
 }
@@ -1248,11 +1280,12 @@ function victory() {
     onContinue: () => {
       GAME.inCombat = false;
       GAME.currentEnemy = null;
+      GAME.heroBuffs = [];
       GAME.heroPoison = null;
       GAME.heroDebuffs = [];
       GAME.enemyPoison = null;
       GAME.enemyDebuffs = [];
-      updateLastActions('', '');
+      updateLastActions('', '', false, false);
       GAME.hero.xp += xpReward;
       drops.forEach(({ item, quantity }) => addItemToInventory(item, quantity));
       if (!GAME.selectedItemId) GAME.selectedItemId = GAME.hero.inventory[0]?.id || null;
@@ -1413,6 +1446,7 @@ function gameOver() {
   GAME.recoveryEndsAt = null;
   GAME.isBlocking = false;
   GAME.roomsCleared = Math.max(0, GAME.roomsCleared - 1);
+  GAME.heroBuffs = [];
   GAME.heroPoison = null;
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
@@ -1422,7 +1456,7 @@ function gameOver() {
     room: GAME.roomsCleared,
     level: GAME.hero.level,
     onContinue: () => {
-      updateLastActions('', '');
+      updateLastActions('', '', false, false);
       renderGame();
       startDefeatRecovery();
     }
@@ -1439,6 +1473,7 @@ function startDefeatRecovery() {
   GAME.awaitingEnemyTurn = false;
   GAME.isBlocking = false;
   GAME.currentEnemy = null;
+  GAME.heroBuffs = [];
   GAME.heroPoison = null;
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
