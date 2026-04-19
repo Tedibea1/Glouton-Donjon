@@ -427,6 +427,9 @@ input[type="text"] {
   color: #f5b041;
   font-weight: 800;
 }
+.combat-action-value.is-crit {
+  color: #e74c3c;
+}
 .combat-last-action-player {
   justify-content: flex-start;
   text-align: left;
