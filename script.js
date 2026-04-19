@@ -753,8 +753,6 @@ function renderGame() {
   const heroSprite = getHeroSprite(hero, fullnessPct);
   const psRatio = `${hero.ps / hero.maxPs * 100}%`;
   const energyRatio = `${hero.energy / hero.maxEnergy * 100}%`;
-  document.getElementById('player-avatar-mini').src = heroSprite;
-  document.getElementById('player-name-mini').textContent = hero.name;
   document.getElementById('player-class-mini').innerHTML = `${hero.className} — Niveau <span id="p-level">${hero.level}</span>`;
   document.getElementById('player-battle-img').src = heroSprite;
   document.getElementById('player-battle-name').textContent = GAME.inCombat ? `${hero.name} (Niv.${hero.level})` : hero.name;
@@ -782,8 +780,6 @@ function renderGame() {
   document.getElementById('p-def').textContent = derived.def;
   document.getElementById('p-evasion').textContent = `${derived.evasion}%`;
   document.getElementById('p-crit').textContent = `${derived.crit}%`;
-  document.getElementById('equip-weapon').textContent = hero.equipment.weapon?.name || 'Aucun';
-  document.getElementById('equip-armor').textContent = hero.equipment.armor?.name || 'Aucune';
   document.getElementById('rooms-count').textContent = GAME.roomsCleared;
   refs.skillLabel.textContent = `${CLASS_DATA[hero.className].skillName} (${CLASS_DATA[hero.className].skillCost} énergie)`;
 
