@@ -380,7 +380,62 @@ input[type="text"] {
 .game-screen.in-combat #combat-controls.controls { gap:8px; }
 .game-screen.in-combat .action-btn { padding:8px 10px; font-size:0.9rem; }
 .game-screen.in-combat .action-btn small { font-size:0.7rem; margin-top:2px; }
-.game-screen.in-combat .log-area { height:170px; font-size:0.82rem; }
+.combat-actions-panel {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items:stretch;
+  min-height: 76px;
+}
+.combat-last-action {
+  display:flex;
+  align-items:center;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(247, 215, 148, 0.18);
+  font-size: 1.22rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.combat-action-content {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  width: 100%;
+}
+.combat-action-content-player .combat-action-label {
+  text-align: left;
+}
+.combat-action-content-player .combat-action-value {
+  margin-left: auto;
+}
+.combat-action-content-enemy .combat-action-value {
+  margin-right: auto;
+  order: 1;
+}
+.combat-action-content-enemy .combat-action-label {
+  text-align: right;
+  order: 2;
+}
+.combat-action-label {
+  font-weight: 700;
+}
+.combat-action-value {
+  color: #f5b041;
+  font-weight: 800;
+}
+.combat-last-action-player {
+  justify-content: flex-start;
+  text-align: left;
+}
+.combat-last-action-enemy {
+  justify-content: flex-start;
+  text-align: left;
+}
+.game-screen.in-combat .combat-actions-panel { min-height: 88px; }
 
 .game-screen.in-combat .bar-inline-text .bar-value { margin-left:auto; }
 
@@ -396,7 +451,7 @@ input[type="text"] {
   flex-direction: column;
 }
 .game-screen.in-combat #combat-controls { order: 2; }
-.game-screen.in-combat #log { order: 3; }
+.game-screen.in-combat #combat-actions { order: 3; }
 .game-screen.in-combat .battlefield {
   align-items: stretch;
 }

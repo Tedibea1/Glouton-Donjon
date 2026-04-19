@@ -151,8 +151,6 @@
           </div>
         </div>
 
-        <div id="log" class="log-area panel"></div>
-
         <div id="exploration-controls" class="controls">
           <button class="action-btn" id="btn-explore">Avancer dans le donjon<small>Déclenche combat, coffre ou piège</small></button>
           <button class="action-btn" id="btn-rest">Se reposer<small>Attends 1 minute pour vider les PS et restaurer l'énergie</small></button>
@@ -167,6 +165,11 @@
 
         <div id="defeat-controls" class="controls hidden">
           <button class="action-btn" id="btn-restart-run">Continuer<small>Lancer la récupération</small></button>
+        </div>
+
+        <div id="combat-actions" class="combat-actions-panel panel">
+          <div id="player-last-action" class="combat-last-action combat-last-action-player"></div>
+          <div id="enemy-last-action" class="combat-last-action combat-last-action-enemy"></div>
         </div>
       </div>
 

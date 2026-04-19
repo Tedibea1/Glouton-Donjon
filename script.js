@@ -97,6 +97,10 @@ const GAME = {
   pendingLevelUps: 0,
   isGameOver: false,
   isRecovering: false,
+  recoveryEndsAt: null,
+  pendingModalAction: null,
+  lastPlayerAction: '',
+  lastEnemyAction: '',
   heroDebuffs: [],
   heroPoison: null,
   enemyDebuffs: [],
@@ -152,6 +156,10 @@ function serializeGameState() {
     selectedItemId: GAME.selectedItemId,
     selectedEquipmentId: GAME.selectedEquipmentId,
     pendingLevelUps: GAME.pendingLevelUps,
+    isRecovering: GAME.isRecovering,
+    recoveryEndsAt: GAME.recoveryEndsAt,
+    lastPlayerAction: GAME.lastPlayerAction,
+    lastEnemyAction: GAME.lastEnemyAction,
     heroDebuffs: GAME.heroDebuffs,
     heroPoison: GAME.heroPoison,
     enemyDebuffs: GAME.enemyDebuffs,
@@ -244,6 +252,10 @@ function hydrateGameState(state) {
   GAME.selectedEquipmentId = state.selectedEquipmentId || null;
   GAME.hero = state.hero;
   GAME.pendingLevelUps = state.pendingLevelUps || 0;
+  GAME.isRecovering = !!state.isRecovering;
+  GAME.recoveryEndsAt = state.recoveryEndsAt || null;
+  GAME.lastPlayerAction = state.lastPlayerAction || '';
+  GAME.lastEnemyAction = state.lastEnemyAction || '';
   GAME.heroDebuffs = state.heroDebuffs || [];
   GAME.heroPoison = state.heroPoison || null;
   GAME.enemyDebuffs = state.enemyDebuffs || [];
@@ -256,9 +268,9 @@ function loadCharacter(characterId) {
   if (!state) return;
   hydrateGameState(state);
   showGameScreen();
-  refs.log.innerHTML = '';
-  addLog(`<strong>${GAME.hero.name}</strong> reprend son aventure.`, 'info');
+  updateLastActions('', '');
   renderGame();
+  if (GAME.isRecovering) resumeDefeatRecovery();
 }
 
 function deleteSelectedCharacter() {
@@ -293,20 +305,138 @@ function resetRunState() {
   GAME.pendingLevelUps = 0;
   GAME.isGameOver = false;
   GAME.isRecovering = false;
+  GAME.recoveryEndsAt = null;
+  GAME.lastPlayerAction = '';
+  GAME.lastEnemyAction = '';
   GAME.heroDebuffs = [];
   GAME.heroPoison = null;
   GAME.enemyDebuffs = [];
   GAME.enemyPoison = null;
-  refs.log.innerHTML = '';
+  updateLastActions('', '');
 }
 
 function roll(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function addLog(message, type = '') {
+  if (!refs.log) return;
   const entry = document.createElement('div');
   entry.className = `log-entry ${type}`.trim();
   entry.innerHTML = message;
   refs.log.appendChild(entry);
   refs.log.scrollTop = refs.log.scrollHeight;
+}
+
+function updateLastActions(playerAction, enemyAction) {
+  if (typeof playerAction === 'string') GAME.lastPlayerAction = playerAction;
+  if (typeof enemyAction === 'string') GAME.lastEnemyAction = enemyAction;
+
+  const playerActionEl = document.getElementById('player-last-action');
+  const enemyActionEl = document.getElementById('enemy-last-action');
+  const renderAction = (text, side) => {
+    const valueFirstMatch = String(text || '').match(/^(\d+[%]?)\s*:\s*(.+)$/);
+    if (valueFirstMatch) {
+      const [, value, label] = valueFirstMatch;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value">${value}</span></span>`;
+    }
+
+    const valueLastMatch = String(text || '').match(/^(.+?)\s*:\s*(\d+[%]?)$/);
+    if (valueLastMatch) {
+      const [, label, value] = valueLastMatch;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value">${value}</span></span>`;
+    }
+
+    return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${String(text || '')}</span></span>`;
+  };
+  if (playerActionEl) playerActionEl.innerHTML = renderAction(GAME.lastPlayerAction, 'player');
+  if (enemyActionEl) enemyActionEl.innerHTML = renderAction(GAME.lastEnemyAction, 'enemy');
+}
+
+function formatLootEntries(entries) {
+  if (!entries || !entries.length) return '<strong>Aucun butin</strong>';
+  return entries.map((entry) => {
+    const item = entry.item || entry;
+    const quantity = entry.quantity || 1;
+    const prefix = quantity > 1 ? `${quantity}x ` : '';
+    return `${item.icon || '📦'} ${prefix}${item.name}`;
+  }).join('<br>');
+}
+
+function showPopup(type, data = {}) {
+  let title = 'Information';
+  let body = '';
+
+  if (type === 'victory') {
+    title = 'Victoire';
+    body = `<strong>EXP gagnée :</strong> ${data.xpReward}<br><br><strong>Butin :</strong><br>${formatLootEntries(data.loot)}`;
+  } else if (type === 'defeat') {
+    title = 'Défaite';
+    body = `${data.heroName} a été totalement saturée à la salle ${data.room}, niveau ${data.level}.`;
+  } else if (type === 'trap') {
+    title = 'Piège';
+    body = `<strong>${data.trapName || 'Piège de gavage'}</strong><br><br><strong>Effet :</strong> ${data.effect}`;
+  } else if (type === 'chest') {
+    title = 'Coffre';
+    body = `<strong>Contenu du coffre :</strong><br>${formatLootEntries(data.contents)}`;
+  }
+
+  GAME.pendingModalAction = typeof data.onContinue === 'function' ? data.onContinue : null;
+  refs.modalTitle.textContent = title;
+  refs.modalText.innerHTML = body;
+  refs.modalStatChoices.classList.add('hidden');
+  refs.modalStatChoices.innerHTML = '';
+  refs.modalConfirm.textContent = 'Continuer';
+  refs.modalConfirm.classList.remove('hidden');
+  refs.modalRestart.classList.add('hidden');
+  refs.modalClose.classList.add('hidden');
+  refs.modal.style.display = 'block';
+}
+
+function formatCountdown(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function showRecoveryModal(timeLeftSeconds) {
+  refs.modalTitle.innerHTML = '🏥';
+  refs.modalText.innerHTML = `Vous êtes transportée d'urgence à la salle de remise en forme.<br>Temps d'attente : <strong>${formatCountdown(timeLeftSeconds)}</strong>`;
+  refs.modalStatChoices.classList.add('hidden');
+  refs.modalStatChoices.innerHTML = '';
+  refs.modalConfirm.classList.add('hidden');
+  refs.modalRestart.classList.add('hidden');
+  refs.modalClose.classList.add('hidden');
+  refs.modal.style.display = 'block';
+}
+
+function finishDefeatRecovery() {
+  if (GAME.restInterval) clearInterval(GAME.restInterval);
+  GAME.restInterval = null;
+  GAME.isRecovering = false;
+  GAME.recoveryEndsAt = null;
+  updateLastActions('', '');
+  GAME.hero.ps = 0;
+  GAME.hero.energy = GAME.hero.maxEnergy;
+  refs.modal.style.display = 'none';
+  refs.modalConfirm.classList.remove('hidden');
+  addLog(`Après un passage en salle de remise en forme, <strong>${GAME.hero.name}</strong> repart à l'exploration avec <strong>0 PS</strong> et toute son énergie.`, 'gain');
+  renderGame();
+}
+
+function resumeDefeatRecovery() {
+  if (!GAME.hero || !GAME.isRecovering || !GAME.recoveryEndsAt) return;
+  if (GAME.restInterval) clearInterval(GAME.restInterval);
+
+  const tick = () => {
+    const timeLeftSeconds = Math.max(0, Math.ceil((GAME.recoveryEndsAt - Date.now()) / 1000));
+    if (timeLeftSeconds <= 0) {
+      finishDefeatRecovery();
+      return;
+    }
+    showRecoveryModal(timeLeftSeconds);
+  };
+
+  tick();
+  if (!GAME.isRecovering) return;
+  GAME.restInterval = setInterval(tick, 1000);
 }
 function shakeElement(el) {
   el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
@@ -439,6 +569,7 @@ function tickHeroStatuses() {
   if (GAME.heroPoison && GAME.heroPoison.turns > 0) {
     GAME.heroPoison.turns -= 1;
     const poisonAmount = GAME.heroPoison.amount;
+    updateLastActions(null, `${poisonAmount} : Poison`);
     applySatietyToHero(poisonAmount, `🥤 Le coca continue d’agir : <strong>+${poisonAmount} PS</strong>.`, 'loss');
     if (GAME.heroPoison.turns <= 0) {
       GAME.heroPoison = null;
@@ -474,6 +605,7 @@ function applyTankCoca() {
     GAME.isBlocking = false;
   }
 
+  updateLastActions(null, `${satiety} : Coca`);
   applySatietyToHero(satiety, `🥤 ${enemy.name} utilise <strong>Coca</strong> et te remplit de <strong>${satiety}</strong> PS !${crit ? ' <span class="critical">CRITIQUE !</span>' : ''}`);
   if (!GAME.inCombat) return;
 
@@ -678,9 +810,9 @@ function startGame() {
   GAME.pendingLevelUps = 0; GAME.isGameOver = false; GAME.heroDebuffs = []; GAME.heroPoison = null; GAME.enemyDebuffs = []; GAME.enemyPoison = null;
   GAME.selectedEquipmentId = startWeapon?.id || startArmor?.id || null;
   GAME.selectedItemId = GAME.hero.inventory.find((item) => !isEquipped(item))?.id || null;
-  refs.creationScreen.classList.add('hidden'); refs.gameScreen.classList.remove('hidden'); refs.log.innerHTML = '';
-  addLog(`<strong>${GAME.hero.name}</strong> entre dans le donjon en tant que <strong>${GAME.hero.className}</strong>.`, 'critical');
-  addLog('Tu peux avancer, te reposer, combattre et gérer ton inventaire à droite.', 'info'); renderGame(); saveGameState(); renderCharacterMenu();
+  refs.creationScreen.classList.add('hidden'); refs.gameScreen.classList.remove('hidden');
+  updateLastActions('', '');
+  renderGame(); saveGameState(); renderCharacterMenu();
 }
 
 function renderEnemySection() {
@@ -782,6 +914,7 @@ function renderGame() {
   document.getElementById('p-crit').textContent = `${derived.crit}%`;
   document.getElementById('rooms-count').textContent = GAME.roomsCleared;
   refs.skillLabel.textContent = `${CLASS_DATA[hero.className].skillName} (${CLASS_DATA[hero.className].skillCost} énergie)`;
+  updateLastActions(GAME.lastPlayerAction, GAME.lastEnemyAction);
 
   const heroStatsPanel = document.getElementById('combat-player-stats');
   heroStatsPanel.innerHTML = renderCombatStats([
@@ -797,11 +930,18 @@ function renderGame() {
   ]);
 
   const playerBonusText = document.getElementById('combat-player-bonus-text');
+  const playerEffects = [];
+  if (GAME.heroPoison?.turns > 0) {
+    playerEffects.push(`Poison : +${GAME.heroPoison.amount} PS (${GAME.heroPoison.turns} tour${GAME.heroPoison.turns > 1 ? 's' : ''})`);
+  }
   if (GAME.heroDebuffs.length) {
-    playerBonusText.innerHTML = GAME.heroDebuffs.map((debuff) => {
+    playerEffects.push(...GAME.heroDebuffs.map((debuff) => {
       const targets = (debuff.stats || ['FOR', 'RAP', 'META']).join(' / ');
       return `Malus : -${debuff.amount} ${targets} (${debuff.turns} tour${debuff.turns > 1 ? 's' : ''})`;
-    }).join('<br>');
+    }));
+  }
+  if (playerEffects.length) {
+    playerBonusText.innerHTML = playerEffects.join('<br>');
   } else {
     playerBonusText.innerHTML = 'Aucun bonus<br>Aucun malus';
   }
@@ -850,8 +990,15 @@ function renderCombatEnemyPanels() {
     { key: 'CRIT', value: `${d.crit ?? 0}%` },
     { key: 'ESQ', value: `${d.evasion ?? 0}%` }
   ]);
+  const enemyEffects = [];
+  if (GAME.enemyPoison?.turns > 0) {
+    enemyEffects.push(`Poison : -${GAME.enemyPoison.amount} PV (${GAME.enemyPoison.turns} tour${GAME.enemyPoison.turns > 1 ? 's' : ''})`);
+  }
   if (GAME.enemyDebuffs.length) {
-    enemyBonus.innerHTML = GAME.enemyDebuffs.map((debuff) => `Malus : -${debuff.amount} ${debuff.stat} (${debuff.turns} tour${debuff.turns > 1 ? 's' : ''})`).join('<br>');
+    enemyEffects.push(...GAME.enemyDebuffs.map((debuff) => `Malus : -${debuff.amount} ${debuff.stat} (${debuff.turns} tour${debuff.turns > 1 ? 's' : ''})`));
+  }
+  if (enemyEffects.length) {
+    enemyBonus.innerHTML = enemyEffects.join('<br>');
   } else {
     enemyBonus.innerHTML = 'Aucun bonus<br>Aucun malus';
   }
@@ -872,6 +1019,7 @@ function tickEnemyStatuses() {
     } else {
       GAME.enemyPoison.turns -= 1;
       const poisonAmount = GAME.enemyPoison.amount;
+      updateLastActions(`Poison : ${poisonAmount}`, null);
       applyDamageToEnemy(poisonAmount, `☠️ Le poison de <strong>Morsure de l'Hydre</strong> inflige <strong>${poisonAmount}</strong> dégâts à ${GAME.currentEnemy.name}.`, 'loss');
     }
     if (GAME.enemyPoison && GAME.enemyPoison.turns <= 0) {
@@ -918,8 +1066,8 @@ function startCombat() {
   GAME.enemyPoison = null;
   GAME.enemyDebuffs = [];
   GAME.inCombat = true; GAME.isBlocking = false;
-  refs.log.innerHTML = '';
-  addLog(`Un <strong>${GAME.currentEnemy.name}</strong> bloque ta route !`, 'loss'); renderGame();
+  updateLastActions('', '');
+  renderGame();
 }
 
 function applyDamageToEnemy(amount, logText, type = '') {
@@ -939,6 +1087,7 @@ function playerAttack(kind) {
     const before = GAME.hero.ps;
     GAME.hero.ps = Math.max(0, GAME.hero.ps - digest);
     const recovered = Math.max(0, before - GAME.hero.ps);
+    updateLastActions(`Digérer : ${recovered}`, null);
     addLog(`🍽️ <strong>Digérer</strong> ! Tu libères <strong>${recovered}</strong> PS.`, 'gain');
     renderGame();
     return finishPlayerTurn();
@@ -948,8 +1097,9 @@ function playerAttack(kind) {
   let baseDamage = roll(Math.max(1, derived.atk - 4), derived.atk + 3);
   let critBonus = false;
   if (roll(1, 100) <= derived.crit) { critBonus = true; baseDamage = Math.floor(baseDamage * 1.5); }
-  if (roll(1, 100) > hitChance) { addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
+  if (roll(1, 100) > hitChance) { updateLastActions('Attaque : 0', null); addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
   const finalDamage = Math.max(1, baseDamage - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
+  updateLastActions(`Attaque : ${finalDamage}`, null);
   applyDamageToEnemy(finalDamage, `Tu lances une attaque sur ${GAME.currentEnemy.name} et infliges <strong>${finalDamage}</strong> dégâts.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
   if (GAME.inCombat) finishPlayerTurn();
 }
@@ -962,6 +1112,7 @@ function useClassSkill() {
 
   if (hero.className === 'Guerrière') {
     const dmg = Math.floor( Math.max(1, roll(derived.atk + 4, derived.atk + 10)) * 0.6);
+    updateLastActions(`Coup de bouclier : ${dmg}`, null);
     applyDamageToEnemy(dmg, `🛡️ <strong>Coup de bouclier</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${dmg}</strong> dégâts et tu encaisses mieux le prochain coup.`, 'critical');
     GAME.isBlocking = true;
   }
@@ -976,6 +1127,7 @@ function useClassSkill() {
     }
 
     if (roll(1, 100) > hitChance) {
+      updateLastActions("Morsure de l'Hydre : 0", null);
       addLog("<strong>Morsure de l'Hydre</strong> rate sa cible !", 'info');
       renderGame();
       if (GAME.inCombat) finishPlayerTurn();
@@ -986,6 +1138,7 @@ function useClassSkill() {
     const malusStat = ['FOR', 'RAP', 'DEF'][roll(0, 2)];
     const statusAmount = hero.level + 2;
 
+    updateLastActions(`Morsure de l'Hydre : ${finalDamage}`, null);
     applyDamageToEnemy(finalDamage, `🐍 <strong>Morsure de l'Hydre</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${finalDamage}</strong> dégâts.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
 
     if (GAME.inCombat && GAME.currentEnemy) {
@@ -1000,6 +1153,7 @@ function useClassSkill() {
     let dmg = Math.max(1, Math.floor(roll(derived.atk + 5, derived.atk + 13) * 1.2));
     const realCrit = roll(1, 100) <= derived.crit;
     if (realCrit) dmg = Math.floor(dmg * 1.5);
+    updateLastActions(`Assassinat : ${dmg}`, null);
     applyDamageToEnemy(dmg, `🗡️ <strong>Assassinat</strong> ! Tu frappes ${GAME.currentEnemy.name} pour <strong>${dmg}</strong> dégâts.${realCrit ? ' <span class="critical">Critique réel !</span>' : ''}`, 'critical');
   }
 
@@ -1009,6 +1163,7 @@ function useClassSkill() {
 function blockAction() {
   if (!GAME.inCombat) return;
   GAME.isBlocking = true;
+  updateLastActions('Encaisser', null);
   addLog('Tu te mets en position défensive. La satiété du prochain coup sera réduite.', 'info');
   finishPlayerTurn();
 }
@@ -1029,6 +1184,7 @@ function enemyTurn() {
 
   const derived = getHeroDerived(GAME.hero);
   if (roll(1, 100) <= derived.evasion) {
+    updateLastActions(null, '0 : Attaque');
     addLog(`Tu esquives l’attaque de ${GAME.currentEnemy.name} !`, 'info'); GAME.isBlocking = false; toggleActionButtons(false); return;
   }
 
@@ -1043,6 +1199,7 @@ function enemyTurn() {
   if (crit) satiety = Math.floor(satiety * 1.5);
   satiety = Math.max(1, satiety - Math.floor(derived.def / 3));
   if (GAME.isBlocking) { satiety = Math.max(1, Math.floor(satiety * 0.45)); addLog('Tu encaisses une partie du choc grâce à ta défense.', 'info'); GAME.isBlocking = false; }
+  updateLastActions(null, `${satiety} : Attaque`);
   applySatietyToHero(satiety, `${GAME.currentEnemy.name} te remplit de <strong>${satiety}</strong> PS !${crit ? ' <span class="critical">CRITIQUE !</span>' : ''}`);
   if (GAME.inCombat) toggleActionButtons(false);
 }
@@ -1081,10 +1238,29 @@ function getEnemyXpReward(enemy) {
 }
 
 function victory() {
-  const enemy = GAME.currentEnemy; GAME.inCombat = false; GAME.currentEnemy = null; GAME.heroPoison = null; GAME.heroDebuffs = []; GAME.enemyPoison = null; GAME.enemyDebuffs = [];
+  const enemy = GAME.currentEnemy;
   const xpReward = getEnemyXpReward(enemy);
-  refs.log.innerHTML = '';
-  addLog(`${enemy.name} est vaincu ! <strong>+${xpReward} XP</strong>.`, 'gain'); GAME.hero.xp += xpReward; rollLoot(enemy); tryLevelUp(); renderGame();
+  const drops = lootTable(enemy).map((item) => ({ item, quantity: 1 }));
+  showPopup('victory', {
+    enemyName: enemy.name,
+    xpReward,
+    loot: drops,
+    onContinue: () => {
+      GAME.inCombat = false;
+      GAME.currentEnemy = null;
+      GAME.heroPoison = null;
+      GAME.heroDebuffs = [];
+      GAME.enemyPoison = null;
+      GAME.enemyDebuffs = [];
+      updateLastActions('', '');
+      GAME.hero.xp += xpReward;
+      drops.forEach(({ item, quantity }) => addItemToInventory(item, quantity));
+      if (!GAME.selectedItemId) GAME.selectedItemId = GAME.hero.inventory[0]?.id || null;
+      renderInventory();
+      tryLevelUp();
+      renderGame();
+    }
+  });
 }
 
 function lootTable(enemy) {
@@ -1122,29 +1298,49 @@ function explore() {
   if (GAME.inCombat || GAME.isRecovering || GAME.isGameOver) return;
   GAME.roomsCleared += 1; const eventRoll = roll(1, 100);
   if (eventRoll <= 64) { startCombat(); return; }
-  if (eventRoll <= 84) { findTreasure(); renderGame(); return; }
-  trapEvent(); renderGame();
+  if (eventRoll <= 84) { findTreasure(); return; }
+  trapEvent();
 }
 
 function findTreasure() {
-  const bonusRoll = roll(1, 100); addLog('Tu découvres un coffre mystérieux.', 'info');
+  const bonusRoll = roll(1, 100);
+  const contents = [];
   if (bonusRoll <= 55) {
-    addItemToInventory(createDigestPotion(), 2);
-    if (roll(1, 100) <= 45) { addItemToInventory(createEnergyPotion(), 1); addLog('Le coffre contient <strong>2 Potions digestives</strong> et <strong>1 Potion d’énergie</strong>.', 'gain'); }
-    else addLog('Le coffre contient <strong>2 Potions digestives</strong>.', 'gain');
+    contents.push({ item: createDigestPotion(), quantity: 2 });
+    if (roll(1, 100) <= 45) contents.push({ item: createEnergyPotion(), quantity: 1 });
   } else if (bonusRoll <= 80) {
     const item = scaleLootItem(ACCESSORIES[Math.floor(Math.random() * ACCESSORIES.length)], GAME.hero.level);
-    addItemToInventory(item, 1); addLog(`Tu trouves <strong>${item.name}</strong> dans le coffre.`, 'loot');
+    contents.push({ item, quantity: 1 });
   } else {
     const item = scaleLootItem(OUTFITS[Math.floor(Math.random() * OUTFITS.length)], GAME.hero.level);
-    addItemToInventory(item, 1); addLog(`Tu trouves <strong>${item.name}</strong> dans le coffre.`, 'loot');
+    contents.push({ item, quantity: 1 });
   }
-  renderInventory();
+  showPopup('chest', {
+    contents,
+    onContinue: () => {
+      contents.forEach(({ item, quantity }) => addItemToInventory(item, quantity));
+      if (!GAME.selectedItemId) GAME.selectedItemId = GAME.hero.inventory[0]?.id || null;
+      renderInventory();
+      renderGame();
+    }
+  });
 }
 
 function trapEvent() {
   const satiety = roll(8, 14) + GAME.roomsCleared;
-  applySatietyToHero(satiety, `⚠️ Un piège te gave et inflige <strong>${satiety}</strong> PS !`, 'loss');
+  showPopup('trap', {
+    trapName: 'Piège de gavage',
+    effect: `<strong>+${satiety} PS</strong> de satiété.`,
+    onContinue: () => {
+      GAME.hero.ps = Math.max(0, GAME.hero.ps + satiety);
+      shakeElement(refs.playerCard);
+      if (GAME.hero.ps >= GAME.hero.maxPs) {
+        gameOver();
+        return;
+      }
+      renderGame();
+    }
+  });
 }
 
 function rest() {
@@ -1214,22 +1410,23 @@ function gameOver() {
   GAME.awaitingEnemyTurn = false;
   GAME.isGameOver = true;
   GAME.isRecovering = false;
+  GAME.recoveryEndsAt = null;
   GAME.isBlocking = false;
   GAME.roomsCleared = Math.max(0, GAME.roomsCleared - 1);
   GAME.heroPoison = null;
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
   GAME.enemyDebuffs = [];
-  refs.modalTitle.textContent = 'Défaite';
-  refs.modalText.textContent = `${GAME.hero.name} a été totalement saturée à la salle ${GAME.roomsCleared}, niveau ${GAME.hero.level}.`;
-  refs.modalStatChoices.classList.add('hidden');
-  refs.modalStatChoices.innerHTML = '';
-  refs.modalConfirm.classList.add('hidden');
-  refs.modalRestart.classList.remove('hidden');
-  refs.modalRestart.textContent = 'Continuer';
-  refs.modalClose.classList.remove('hidden');
-  refs.modal.style.display = 'block';
-  renderGame();
+  showPopup('defeat', {
+    heroName: GAME.hero.name,
+    room: GAME.roomsCleared,
+    level: GAME.hero.level,
+    onContinue: () => {
+      updateLastActions('', '');
+      renderGame();
+      startDefeatRecovery();
+    }
+  });
 }
 
 function startDefeatRecovery() {
@@ -1237,6 +1434,7 @@ function startDefeatRecovery() {
 
   GAME.isGameOver = false;
   GAME.isRecovering = true;
+  GAME.recoveryEndsAt = Date.now() + 300000;
   GAME.inCombat = false;
   GAME.awaitingEnemyTurn = false;
   GAME.isBlocking = false;
@@ -1247,6 +1445,8 @@ function startDefeatRecovery() {
   GAME.enemyDebuffs = [];
 
   renderGame();
+  resumeDefeatRecovery();
+  return;
 
   refs.modalTitle.innerHTML = '🏥';
   refs.modalText.innerHTML = `Vous êtes transportée d'urgence à la salle de remise en forme.<br>Temps d'attente : <strong>5:00</strong>`;
@@ -1280,11 +1480,19 @@ function startDefeatRecovery() {
 }
 function closeModal() {
   if (GAME.isRecovering) return;
+  const action = GAME.pendingModalAction;
+  GAME.pendingModalAction = null;
   refs.modal.style.display = 'none';
   refs.modalStatChoices.classList.add('hidden');
   refs.modalStatChoices.innerHTML = '';
   refs.modalConfirm.classList.remove('hidden');
   refs.modalClose.classList.add('hidden');
+  refs.modalRestart.classList.add('hidden');
+  refs.modalConfirm.textContent = 'Continuer';
+  if (action) {
+    action();
+    return;
+  }
   renderGame();
 }
 
