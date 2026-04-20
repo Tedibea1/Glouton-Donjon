@@ -170,6 +170,23 @@ input[type="text"] {
 .info { color:#74b9ff; }
 .loot { color:#f6e58d; }
 .controls { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.recovery-panel {
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(247, 215, 148, 0.18);
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-align: center;
+}
+.recovery-panel-title {
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.recovery-panel-text {
+  color: #e8e6e3;
+  line-height: 1.5;
+}
 .action-btn small { display:block; font-size:0.78rem; opacity:0.9; margin-top:4px; }
 .inventory-list { display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; margin-bottom:12px; }
 .item-row { background:rgba(255,255,255,0.045); border-radius:8px; padding:10px; border:1px solid transparent; cursor:pointer; }

@@ -124,7 +124,7 @@ const refs = {};
   'class-grid','creation-stat-list','creation-points','hero-name','start-btn','preview-emoji','preview-name','preview-class',
   'preview-for','preview-cap','preview-rap','preview-meta','class-bonuses','menu-screen','character-list','menu-empty-text','menu-play-btn','menu-create-btn','menu-delete-btn','creation-screen','creation-back-btn','game-screen','log',
   'player-card','enemy-card','modal','modal-close','modal-title','modal-text','modal-confirm','modal-restart','modal-stat-choices',
-  'exploration-controls','combat-controls','defeat-controls','btn-explore','btn-rest','btn-attack','btn-heavy','btn-block','btn-skill','btn-restart-run',
+  'exploration-controls','recovery-controls','recovery-text','combat-controls','defeat-controls','btn-explore','btn-rest','btn-attack','btn-heavy','btn-block','btn-skill','btn-restart-run',
   'skill-label','equipment-list','inventory-list','btn-use-equipped','btn-equip-equipped','btn-drop-equipped',
   'btn-use-item','btn-equip-item','btn-drop-item'
 ].forEach(id => refs[id.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = document.getElementById(id));
@@ -427,14 +427,10 @@ function formatCountdown(totalSeconds) {
 }
 
 function showRecoveryModal(timeLeftSeconds) {
-  refs.modalTitle.innerHTML = '🏥';
-  refs.modalText.innerHTML = `Vous êtes transportée d'urgence à la salle de remise en forme.<br>Temps d'attente : <strong>${formatCountdown(timeLeftSeconds)}</strong>`;
-  refs.modalStatChoices.classList.add('hidden');
-  refs.modalStatChoices.innerHTML = '';
-  refs.modalConfirm.classList.add('hidden');
-  refs.modalRestart.classList.add('hidden');
-  refs.modalClose.classList.add('hidden');
-  refs.modal.style.display = 'block';
+  refs.modal.style.display = 'none';
+  if (refs.recoveryText) {
+    refs.recoveryText.innerHTML = `Vous êtes transportée d'urgence à la salle de remise en forme.<br>Temps d'attente : <strong>${formatCountdown(timeLeftSeconds)}</strong>`;
+  }
 }
 
 function finishDefeatRecovery() {
@@ -1030,6 +1026,7 @@ function renderGame() {
 
   refs.gameScreen.classList.toggle('in-combat', GAME.inCombat);
   refs.explorationControls.classList.toggle('hidden', GAME.inCombat || GAME.isGameOver || GAME.isRecovering);
+  refs.recoveryControls.classList.toggle('hidden', !GAME.isRecovering);
   refs.combatControls.classList.toggle('hidden', !GAME.inCombat || GAME.isGameOver || GAME.isRecovering);
   refs.defeatControls.classList.toggle('hidden', !GAME.isGameOver);
   refs.btnRestartRun.textContent = 'Continuer';
