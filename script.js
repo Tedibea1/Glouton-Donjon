@@ -322,6 +322,8 @@ function resetRunState() {
 }
 
 function roll(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+const LEVEL_UP_MODAL_DELAY = 500;
+
 function addLog(message, type = '') {
   if (!refs.log) return;
   const entry = document.createElement('div');
@@ -1255,7 +1257,15 @@ function openStatChoiceModal() {
     const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.textContent = `${stat} +1`;
     btn.onclick = () => {
       GAME.hero.stats[stat] += 1; picksLeft -= 1; btn.disabled = true; syncHeroCaps(false); GAME.hero.energy = GAME.hero.maxEnergy; renderGame();
-      if (picksLeft <= 0) { GAME.pendingLevelUps -= 1; if (GAME.pendingLevelUps > 0) openStatChoiceModal(); else closeModal(); }
+      if (picksLeft <= 0) {
+        GAME.pendingLevelUps -= 1;
+        closeModal();
+        if (GAME.pendingLevelUps > 0) {
+          setTimeout(() => {
+            if (GAME.pendingLevelUps > 0) openStatChoiceModal();
+          }, LEVEL_UP_MODAL_DELAY);
+        }
+      }
     };
     refs.modalStatChoices.appendChild(btn);
   });
