@@ -350,6 +350,18 @@ function updateLastActions(playerAction, enemyAction, playerCrit = null, enemyCr
   const playerActionEl = document.getElementById('player-last-action');
   const enemyActionEl = document.getElementById('enemy-last-action');
   const renderAction = (text, side, isCrit) => {
+    const missValueFirstMatch = String(text || '').match(/^(Raté)\s*:\s*(.+)$/i);
+    if (missValueFirstMatch) {
+      const [, value, label] = missValueFirstMatch;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value is-miss">${value}</span></span>`;
+    }
+
+    const missValueLastMatch = String(text || '').match(/^(.+?)\s*:\s*(Raté)$/i);
+    if (missValueLastMatch) {
+      const [, label, value] = missValueLastMatch;
+      return `<span class="combat-action-content combat-action-content-${side}"><span class="combat-action-label">${label}</span><span class="combat-action-value is-miss">${value}</span></span>`;
+    }
+
     const valueFirstMatch = String(text || '').match(/^(\d+[%]?)\s*:\s*(.+)$/);
     if (valueFirstMatch) {
       const [, value, label] = valueFirstMatch;
@@ -762,9 +774,19 @@ function addItemToInventory(item, quantity = 1) {
 function removeInventoryItem(itemId, quantity = 1) {
   const hero = GAME.hero; const idx = hero.inventory.findIndex((entry) => entry.id === itemId); if (idx === -1) return;
   const item = hero.inventory[idx];
-  if (item.stackable) { item.quantity -= quantity; if (item.quantity <= 0) hero.inventory.splice(idx, 1); }
-  else hero.inventory.splice(idx, 1);
-  if (GAME.selectedItemId === itemId) GAME.selectedItemId = hero.inventory[0]?.id || null;
+  let removed = false;
+  if (item.stackable) {
+    item.quantity -= quantity;
+    if (item.quantity <= 0) {
+      hero.inventory.splice(idx, 1);
+      removed = true;
+    }
+  }
+  else {
+    hero.inventory.splice(idx, 1);
+    removed = true;
+  }
+  if (GAME.selectedItemId === itemId && removed) GAME.selectedItemId = hero.inventory[0]?.id || null;
 }
 function getSelectedItem() { return GAME.hero.inventory.find((item) => item.id === GAME.selectedItemId) || null; }
 function getSelectedEquipmentItem() {
@@ -1156,7 +1178,7 @@ function playerAttack(kind) {
   let baseDamage = roll(Math.max(1, derived.atk - 4), derived.atk + 3);
   let critBonus = false;
   if (roll(1, 100) <= derived.crit) { critBonus = true; baseDamage = Math.floor(baseDamage * 1.5); }
-  if (roll(1, 100) > hitChance) { updateLastActions('Attaque : 0', null, false, null); addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
+  if (roll(1, 100) > hitChance) { updateLastActions('Attaque : Raté', null, false, null); addLog('Ton attaque rate sa cible !', 'info'); return finishPlayerTurn(); }
   const finalDamage = Math.max(1, baseDamage - Math.floor(GAME.currentEnemy.derived.stats.DEF / 3));
   updateLastActions(`Attaque : ${finalDamage}`, null, critBonus, null);
   applyDamageToEnemy(finalDamage, `Tu lances une attaque sur ${GAME.currentEnemy.name} et infliges <strong>${finalDamage}</strong> dégâts.${critBonus ? ' <span class="critical">CRITIQUE !</span>' : ''}`, critBonus ? 'critical' : '');
@@ -1190,7 +1212,7 @@ function useClassSkill() {
     }
 
     if (roll(1, 100) > hitChance) {
-      updateLastActions("Morsure de l'Hydre : 0", null, false, null);
+      updateLastActions("Morsure de l'Hydre : Raté", null, false, null);
       addLog("<strong>Morsure de l'Hydre</strong> rate sa cible !", 'info');
       renderGame();
       if (GAME.inCombat) finishPlayerTurn();
@@ -1247,7 +1269,7 @@ function enemyTurn() {
 
   const derived = getHeroDerived(GAME.hero);
   if (roll(1, 100) <= derived.evasion) {
-    updateLastActions(null, '0 : Attaque', null, false);
+    updateLastActions(null, 'Raté : Attaque', null, false);
     addLog(`Tu esquives l’attaque de ${GAME.currentEnemy.name} !`, 'info'); GAME.isBlocking = false; toggleActionButtons(false); return;
   }
 
