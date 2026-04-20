@@ -428,6 +428,12 @@ function formatCountdown(totalSeconds) {
 
 function showRecoveryModal(timeLeftSeconds) {
   refs.modal.style.display = 'none';
+  refs.modalStatChoices.classList.add('hidden');
+  refs.modalStatChoices.innerHTML = '';
+  refs.modalConfirm.classList.add('hidden');
+  refs.modalRestart.classList.add('hidden');
+  refs.modalClose.classList.add('hidden');
+  GAME.pendingModalAction = null;
   if (refs.recoveryText) {
     refs.recoveryText.innerHTML = `Vous êtes transportée d'urgence à la salle de remise en forme.<br>Temps d'attente : <strong>${formatCountdown(timeLeftSeconds)}</strong>`;
   }
@@ -1536,6 +1542,13 @@ function startDefeatRecovery() {
   GAME.heroDebuffs = [];
   GAME.enemyPoison = null;
   GAME.enemyDebuffs = [];
+  GAME.pendingModalAction = null;
+  refs.modal.style.display = 'none';
+  refs.modalStatChoices.classList.add('hidden');
+  refs.modalStatChoices.innerHTML = '';
+  refs.modalConfirm.classList.add('hidden');
+  refs.modalRestart.classList.add('hidden');
+  refs.modalClose.classList.add('hidden');
 
   renderGame();
   resumeDefeatRecovery();
