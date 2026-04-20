@@ -920,11 +920,28 @@ function renderGame() {
   const heroSprite = getHeroSprite(hero, fullnessPct);
   const psRatio = `${hero.ps / hero.maxPs * 100}%`;
   const energyRatio = `${hero.energy / hero.maxEnergy * 100}%`;
+  const battlefield = document.querySelector('.battlefield');
+  const playerCard = document.getElementById('player-card');
+  const enemyCard = document.getElementById('enemy-card');
+  const playerExploreBar = document.querySelector('#player-card .exploration-bar-wrap');
+  const playerBattleSub = document.getElementById('player-battle-sub');
+  const playerStatusChip = document.getElementById('player-status-chip');
   document.getElementById('player-class-mini').innerHTML = `${hero.className} — Niveau <span id="p-level">${hero.level}</span>`;
   document.getElementById('player-battle-img').src = heroSprite;
   document.getElementById('player-battle-name').textContent = GAME.inCombat ? `${hero.name} (Niv.${hero.level})` : hero.name;
   document.getElementById('player-battle-sub').textContent = `${hero.className} prête au combat`;
   document.getElementById('player-status-chip').textContent = GAME.inCombat ? '' : 'En exploration';
+
+  if (battlefield && playerCard && enemyCard) {
+    battlefield.style.gridTemplateColumns = GAME.inCombat ? '' : 'minmax(0, 1fr)';
+    enemyCard.style.display = GAME.inCombat ? '' : 'none';
+    playerCard.style.width = GAME.inCombat ? '' : 'min(100%, 960px)';
+    playerCard.style.margin = GAME.inCombat ? '' : '0 auto';
+    playerCard.style.minHeight = GAME.inCombat ? '' : '320px';
+  }
+  if (playerExploreBar) playerExploreBar.style.display = GAME.inCombat ? '' : 'none';
+  if (playerBattleSub) playerBattleSub.style.display = GAME.inCombat ? '' : 'none';
+  if (playerStatusChip) playerStatusChip.style.display = 'none';
 
   document.getElementById('p-ps-text').textContent = `${Math.ceil(hero.ps)} / ${hero.maxPs}`;
   document.getElementById('p-ps-bar').style.width = psRatio;
