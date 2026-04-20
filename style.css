@@ -124,6 +124,19 @@ input[type="text"] {
 .equipment-box { background:rgba(255,255,255,0.04); border-radius:10px; padding:12px; margin-top:8px; line-height:1.45; }
 .main-center { display:flex; flex-direction:column; gap:14px; }
 .battlefield { display:grid; grid-template-columns:1fr 1fr; gap:14px; min-height:260px; }
+.game-screen:not(.in-combat) .battlefield { grid-template-columns:minmax(0, 1fr); }
+.game-screen:not(.in-combat) #enemy-card { display:none; }
+.game-screen:not(.in-combat) #player-card {
+  width:min(100%, 960px);
+  justify-self:stretch;
+  margin:0 auto;
+  min-height:320px;
+}
+.game-screen:not(.in-combat) #player-card .subtext,
+.game-screen:not(.in-combat) #player-card .exploration-bar-wrap,
+.game-screen:not(.in-combat) #player-card .status-chip {
+  display:none;
+}
 .visual-card {
   background:#000; border:2px solid var(--border); border-radius:12px; display:flex; flex-direction:column;
   justify-content:center; align-items:center; position:relative; overflow:hidden; padding:16px; min-height:260px;
