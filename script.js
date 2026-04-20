@@ -7,6 +7,14 @@ const HERO_SPRITES = {
     { limit: 20, sprite: 'assets/leger_gonfler.png' },
     { limit: 0, sprite: 'assets/normal.png' }
   ],
+  max300: [
+    { limit: 100, sprite: 'assets/full-100-300.png' },
+    { limit: 80, sprite: 'assets/immobile-100-300.png' },
+    { limit: 60, sprite: 'assets/tres_gonfler-100-300.png' },
+    { limit: 40, sprite: 'assets/gonfler-100-300.png' },
+    { limit: 20, sprite: 'assets/leger_gonfler-100-300.png' },
+    { limit: 0, sprite: 'assets/normal-100-300.png' }
+  ],
   max500: [
     { limit: 100, sprite: 'assets/full-100-500.png' },
     { limit: 80, sprite: 'assets/immobile-500.png' },
@@ -459,7 +467,11 @@ function classAdjustedStats(baseStats, className) {
   return adjusted;
 }
 function getHeroSprite(hero, fullnessPct) {
-  const spriteSet = hero.maxPs >= 500 ? HERO_SPRITES.max500 : HERO_SPRITES.normal;
+  const spriteSet = hero.maxPs >= 500
+    ? HERO_SPRITES.max500
+    : hero.maxPs >= 300
+      ? HERO_SPRITES.max300
+      : HERO_SPRITES.normal;
   for (const entry of spriteSet) if (fullnessPct >= entry.limit) return entry.sprite;
   return spriteSet[spriteSet.length - 1].sprite;
 }
