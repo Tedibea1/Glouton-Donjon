@@ -946,7 +946,7 @@ function renderGame() {
   const playerStatusChip = document.getElementById('player-status-chip');
   document.getElementById('player-class-mini').innerHTML = `${hero.className} — Niveau <span id="p-level">${hero.level}</span>`;
   document.getElementById('player-battle-img').src = heroSprite;
-  document.getElementById('player-battle-name').textContent = GAME.inCombat ? `${hero.name} (Niv.${hero.level})` : hero.name;
+  document.getElementById('player-battle-name').textContent = GAME.inCombat ? `${hero.name} (Niv.${hero.level})` : '\u00A0';
   document.getElementById('player-battle-sub').textContent = `${hero.className} prête au combat`;
   document.getElementById('player-status-chip').textContent = GAME.inCombat ? '' : 'En exploration';
 

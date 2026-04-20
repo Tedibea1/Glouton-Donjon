@@ -133,7 +133,6 @@ input[type="text"] {
   min-height:320px;
 }
 .game-screen:not(.in-combat) #player-card .subtext,
-.game-screen:not(.in-combat) #player-card h3,
 .game-screen:not(.in-combat) #player-card .exploration-bar-wrap,
 .game-screen:not(.in-combat) #player-card .status-chip {
   display:none;
