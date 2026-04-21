@@ -141,6 +141,10 @@ input[type="text"] {
   background:#000 url('assets/fond.png') center center / cover no-repeat; border:2px solid var(--border); border-radius:12px; display:flex; flex-direction:column;
   justify-content:center; align-items:center; position:relative; overflow:hidden; padding:16px; min-height:260px;
 }
+.visual-card > * {
+  position: relative;
+  z-index: 1;
+}
 .battle-img {
   width: min(100%, 512px);
   height: auto;
@@ -385,6 +389,14 @@ input[type="text"] {
   min-height:440px; padding:6px 8px 6px;
   justify-content:flex-start;
   align-items:center;
+}
+.game-screen.in-combat .visual-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.26);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .game-screen.in-combat #player-card,
