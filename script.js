@@ -129,6 +129,35 @@ const refs = {};
   'btn-use-item','btn-equip-item','btn-drop-item'
 ].forEach(id => refs[id.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = document.getElementById(id));
 
+let fitViewportRaf = null;
+
+function fitGameToViewport() {
+  const wrapper = document.getElementById('game-wrapper');
+  if (!wrapper) return;
+
+  wrapper.style.left = '0px';
+  wrapper.style.top = '0px';
+  wrapper.style.transform = 'none';
+  const availableWidth = Math.max(320, window.innerWidth - 24);
+  const availableHeight = Math.max(320, window.innerHeight - 24);
+  const scale = Math.min(availableWidth / wrapper.offsetWidth, availableHeight / wrapper.offsetHeight, 1);
+  const scaledWidth = wrapper.offsetWidth * scale;
+  const scaledHeight = wrapper.offsetHeight * scale;
+  const offsetX = Math.max(12, Math.floor((window.innerWidth - scaledWidth) / 2));
+  const offsetY = Math.max(12, Math.floor((window.innerHeight - scaledHeight) / 2));
+  wrapper.style.left = `${offsetX}px`;
+  wrapper.style.top = `${offsetY}px`;
+  wrapper.style.transform = `scale(${scale})`;
+}
+
+function scheduleViewportFit() {
+  if (fitViewportRaf) cancelAnimationFrame(fitViewportRaf);
+  fitViewportRaf = requestAnimationFrame(() => {
+    fitViewportRaf = null;
+    fitGameToViewport();
+  });
+}
+
 
 function getSavedCharacters() {
   try {
@@ -209,6 +238,7 @@ function renderCharacterMenu() {
     refs.menuEmptyText.textContent = 'Aucun personnage sauvegardé.';
     refs.menuPlayBtn.disabled = true;
     refs.menuDeleteBtn.disabled = true;
+    scheduleViewportFit();
     return;
   }
 
@@ -231,6 +261,7 @@ function renderCharacterMenu() {
   refs.menuEmptyText.textContent = 'Sélectionne un personnage puis choisis une action.';
   refs.menuPlayBtn.disabled = false;
   refs.menuDeleteBtn.disabled = false;
+  scheduleViewportFit();
 }
 
 function showMenuScreen() {
@@ -251,6 +282,7 @@ function showGameScreen() {
   refs.menuScreen.classList.add('hidden');
   refs.creationScreen.classList.add('hidden');
   refs.gameScreen.classList.remove('hidden');
+  scheduleViewportFit();
 }
 
 function hydrateGameState(state) {
@@ -836,6 +868,7 @@ function renderCreation() {
   refs.previewMeta.textContent = previewStats.META;
   refs.classBonuses.innerHTML = CLASS_DATA[CREATION.className].bonuses.map((b) => `<li>${b}</li>`).join('');
   refs.startBtn.disabled = !canStartAdventure();
+  scheduleViewportFit();
 }
 
 function createStartingInventory(className) {
@@ -1038,7 +1071,7 @@ function renderGame() {
   refs.btnRestartRun.textContent = 'Continuer';
   refs.btnRestartRun.title = 'Continuer';
   refs.btnRestartRun.innerHTML = 'Continuer<small>Lancer la récupération</small>';
-  toggleActionButtons(false); renderEnemySection(); renderCombatEnemyPanels(); renderEquipment(); renderInventory();
+  toggleActionButtons(false); renderEnemySection(); renderCombatEnemyPanels(); renderEquipment(); renderInventory(); scheduleViewportFit();
 }
 
 function renderCombatEnemyPanels() {
@@ -1628,6 +1661,8 @@ refs.modalRestart.addEventListener('click', () => {
 refs.btnRestartRun.addEventListener('click', () => {
   startDefeatRecovery();
 });
+window.addEventListener('resize', scheduleViewportFit);
 
 renderCreation();
 showMenuScreen();
+scheduleViewportFit();

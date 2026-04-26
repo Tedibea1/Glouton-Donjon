@@ -16,12 +16,10 @@ body {
   font-family: 'Garamond', 'Georgia', serif;
   background: radial-gradient(circle at top, #111 0%, #050505 100%);
   color: var(--text);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
   margin: 0;
   overflow: hidden;
+  position: relative;
 }
 
 @keyframes shake {
@@ -41,14 +39,17 @@ body {
 .hidden { display: none !important; }
 
 #game-wrapper {
-  width: 96%;
-  max-width: 1240px;
+  width: 1240px;
   background: var(--panel);
   border: 5px double var(--border);
   border-radius: 18px;
   padding: 22px;
   box-shadow: 0 0 50px rgba(0,0,0,0.85);
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  transform-origin: top left;
 }
 .header {
   text-align: center;
@@ -201,7 +202,7 @@ input[type="text"] {
 .small-btn { padding:10px 8px; font-size:0.88rem; }
 .modal {
   position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--panel); border:3px solid var(--secondary);
-  padding:28px; text-align:center; z-index:100; border-radius:16px; display:none; box-shadow:0 0 100px #000; width:min(92vw, 560px);
+  padding:28px; text-align:center; z-index:100; border-radius:16px; display:none; box-shadow:0 0 100px #000; width:min(92%, 560px); max-height:calc(100% - 32px); overflow:auto;
 }
 .modal h2 { margin-top:0; color:var(--secondary); }
 .modal p { line-height:1.5; color:#e8e6e3; }
@@ -227,10 +228,7 @@ input[type="text"] {
 #btn-restart-run { max-width: 320px; margin: 0 auto; }
 
 @media (max-width: 1080px) {
-  body { overflow:auto; }
-  #game-wrapper { margin:14px; }
-  .game-screen,.creation-screen,.battlefield { grid-template-columns:1fr; }
-  .log-area { height:220px; }
+  #game-wrapper { margin:0; }
 }
 
 
@@ -486,8 +484,7 @@ input[type="text"] {
 .game-screen.in-combat .bar-inline-text .bar-value { margin-left:auto; }
 
 @media (max-width: 1080px) {
-  .game-screen.in-combat .battlefield { grid-template-columns:1fr; }
-  .game-screen.in-combat .combat-side { order:2; }
+  .game-screen.in-combat .battlefield { grid-template-columns: 135px minmax(0, 1fr) minmax(0, 1fr) 135px; }
 }
 
 
